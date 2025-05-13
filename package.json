@@ -1,7 +1,7 @@
 {
-  "name": "discord-deepseek-bot",
-  "version": "1.0.2",
-  "description": "Discord bot using DeepSeek API via OpenAI SDK and Discord.js",
+  "name": "openrouter-deepseek-bot",
+  "version": "1.0.0",
+  "description": "Discord bot using OpenRouter with DeepSeek model",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -9,15 +9,6 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": [
-    "discord",
-    "bot",
-    "deepseek",
-    "openai",
-    "ai"
-  ],
-  "author": "Your Name",
-  "license": "MIT",
   "dependencies": {
     "axios": "^1.6.0",
     "discord.js": "^14.0.0",

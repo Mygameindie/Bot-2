@@ -4,12 +4,12 @@ const express = require('express');
 const OpenAI = require('openai');
 
 const openai = new OpenAI({
-  baseURL: 'https://api.deepseek.com',
-  apiKey: process.env.DEEPSEEK_API_KEY
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY
 });
 
-if (!process.env.DEEPSEEK_API_KEY || !process.env.DISCORD_TOKEN) {
-  console.error("Missing required environment variables: DEEPSEEK_API_KEY or DISCORD_TOKEN");
+if (!process.env.OPENROUTER_API_KEY || !process.env.DISCORD_TOKEN) {
+  console.error("Missing environment variables.");
   process.exit(1);
 }
 
@@ -54,7 +54,7 @@ client.on('messageCreate', async (message) => {
     await message.channel.sendTyping();
 
     const completion = await openai.chat.completions.create({
-      model: "deepseek-chat",
+      model: "deepseek-ai/deepseek-chat",
       messages: history,
       temperature: 0.7,
       max_tokens: 150
@@ -65,7 +65,7 @@ client.on('messageCreate', async (message) => {
 
     await message.reply(reply);
   } catch (err) {
-    console.error("DeepSeek API Error:");
+    console.error("OpenRouter/DeepSeek API Error:");
     if (err.response) {
       console.error("Status Code:", err.response.status);
       console.error("Response Data:", JSON.stringify(err.response.data, null, 2));
