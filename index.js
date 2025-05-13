@@ -3,19 +3,16 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
 const OpenAI = require('openai');
 
-// Initialize DeepSeek API via OpenAI-compatible SDK
 const openai = new OpenAI({
   baseURL: 'https://api.deepseek.com',
   apiKey: process.env.DEEPSEEK_API_KEY
 });
 
-// Check required environment variables
 if (!process.env.DEEPSEEK_API_KEY || !process.env.DISCORD_TOKEN) {
   console.error("Missing required environment variables: DEEPSEEK_API_KEY or DISCORD_TOKEN");
   process.exit(1);
 }
 
-// Set up Discord client
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -24,7 +21,6 @@ const client = new Client({
   ]
 });
 
-// Per-user conversation tracking
 const conversations = new Map();
 
 client.once('ready', () => {
@@ -48,7 +44,6 @@ client.on('messageCreate', async (message) => {
   const history = conversations.get(userId);
   history.push({ role: "user", content: message.content });
 
-  // Trim messages: keep system + last 10
   if (history.length > 11) {
     const systemMsg = history.shift();
     history.splice(0, history.length - 10);
@@ -70,16 +65,20 @@ client.on('messageCreate', async (message) => {
 
     await message.reply(reply);
   } catch (err) {
-    console.error("DeepSeek API Error:", err);
-    await message.reply("There was an error while processing your message.");
+    console.error("DeepSeek API Error:");
+    if (err.response) {
+      console.error("Status Code:", err.response.status);
+      console.error("Response Data:", JSON.stringify(err.response.data, null, 2));
+    } else {
+      console.error("Error Message:", err.message);
+    }
+    await message.reply("I ran into an error trying to reply. Please try again later.");
   }
 });
 
-// Health check endpoint
 const app = express();
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Web server running on port ${PORT}`));
 
-// Start Discord bot
 client.login(process.env.DISCORD_TOKEN);
