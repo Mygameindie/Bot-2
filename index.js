@@ -3,9 +3,14 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
 const OpenAI = require('openai');
 
+// Configure OpenRouter (OpenAI-compatible SDK) with required headers
 const openai = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY
+  apiKey: process.env.OPENROUTER_API_KEY,
+  defaultHeaders: {
+    'HTTP-Referer': 'https://render.com', // or your own domain
+    'X-Title': 'discord-deepseek-bot'
+  }
 });
 
 if (!process.env.OPENROUTER_API_KEY || !process.env.DISCORD_TOKEN) {
