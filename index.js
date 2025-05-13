@@ -1,15 +1,21 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const axios = require('axios');
 const express = require('express');
+const OpenAI = require('openai');
 
-// Check for required environment variables
+// Initialize DeepSeek API via OpenAI-compatible SDK
+const openai = new OpenAI({
+  baseURL: 'https://api.deepseek.com',
+  apiKey: process.env.DEEPSEEK_API_KEY
+});
+
+// Check required environment variables
 if (!process.env.DEEPSEEK_API_KEY || !process.env.DISCORD_TOKEN) {
   console.error("Missing required environment variables: DEEPSEEK_API_KEY or DISCORD_TOKEN");
   process.exit(1);
 }
 
-// Create Discord client
+// Set up Discord client
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -18,7 +24,7 @@ const client = new Client({
   ]
 });
 
-// In-memory conversation history (per user)
+// Per-user conversation tracking
 const conversations = new Map();
 
 client.once('ready', () => {
@@ -30,12 +36,11 @@ client.on('messageCreate', async (message) => {
 
   const userId = message.author.id;
 
-  // Start new conversation if none exists
   if (!conversations.has(userId)) {
     conversations.set(userId, [
       {
         role: "system",
-        content: "You are a friendly and helpful AI assistant. Be concise but engaging in your responses."
+        content: "You are a helpful assistant."
       }
     ]);
   }
@@ -43,7 +48,7 @@ client.on('messageCreate', async (message) => {
   const history = conversations.get(userId);
   history.push({ role: "user", content: message.content });
 
-  // Trim history to max 10 messages + system
+  // Trim messages: keep system + last 10
   if (history.length > 11) {
     const systemMsg = history.shift();
     history.splice(0, history.length - 10);
@@ -53,39 +58,28 @@ client.on('messageCreate', async (message) => {
   try {
     await message.channel.sendTyping();
 
-    const response = await axios.post('https://api.deepseek.com/v1/chat/completions', {
+    const completion = await openai.chat.completions.create({
       model: "deepseek-chat",
       messages: history,
       temperature: 0.7,
       max_tokens: 150
-    }, {
-      headers: {
-        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
     });
 
-    const reply = response.data.choices[0].message.content;
+    const reply = completion.choices[0].message.content;
     history.push({ role: "assistant", content: reply });
 
     await message.reply(reply);
   } catch (err) {
-    console.error("DeepSeek API Error:");
-    if (err.response) {
-      console.error("Status:", err.response.status);
-      console.error("Data:", err.response.data);
-    } else {
-      console.error("Message:", err.message);
-    }
-    await message.reply("I ran into an error trying to reply. Please try again later.");
+    console.error("DeepSeek API Error:", err);
+    await message.reply("There was an error while processing your message.");
   }
 });
 
-// Optional health check
+// Health check endpoint
 const app = express();
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Web server running on port ${PORT}`));
 
-// Login to Discord
+// Start Discord bot
 client.login(process.env.DISCORD_TOKEN);

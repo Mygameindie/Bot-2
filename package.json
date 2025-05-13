@@ -1,7 +1,7 @@
 {
   "name": "discord-deepseek-bot",
-  "version": "1.0.1",
-  "description": "Discord bot using DeepSeek API and Discord.js",
+  "version": "1.0.2",
+  "description": "Discord bot using DeepSeek API via OpenAI SDK and Discord.js",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -13,6 +13,7 @@
     "discord",
     "bot",
     "deepseek",
+    "openai",
     "ai"
   ],
   "author": "Your Name",
@@ -21,6 +22,7 @@
     "axios": "^1.6.0",
     "discord.js": "^14.0.0",
     "dotenv": "^16.0.0",
-    "express": "^4.18.0"
+    "express": "^4.18.0",
+    "openai": "^4.0.0"
   }
 }
