@@ -3,15 +3,22 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const axios = require('axios');
 const express = require('express');
 
+// Check for required environment variables
 if (!process.env.DEEPSEEK_API_KEY || !process.env.DISCORD_TOKEN) {
   console.error("Missing required environment variables: DEEPSEEK_API_KEY or DISCORD_TOKEN");
   process.exit(1);
 }
 
+// Create Discord client
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ]
 });
 
+// In-memory conversation history (per user)
 const conversations = new Map();
 
 client.once('ready', () => {
@@ -21,8 +28,11 @@ client.once('ready', () => {
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  if (!conversations.has(message.author.id)) {
-    conversations.set(message.author.id, [
+  const userId = message.author.id;
+
+  // Start new conversation if none exists
+  if (!conversations.has(userId)) {
+    conversations.set(userId, [
       {
         role: "system",
         content: "You are a friendly and helpful AI assistant. Be concise but engaging in your responses."
@@ -30,13 +40,14 @@ client.on('messageCreate', async (message) => {
     ]);
   }
 
-  const conversationHistory = conversations.get(message.author.id);
-  conversationHistory.push({ role: "user", content: message.content });
+  const history = conversations.get(userId);
+  history.push({ role: "user", content: message.content });
 
-  if (conversationHistory.length > 10) {
-    const systemMessage = conversationHistory.shift();
-    conversationHistory.splice(0, conversationHistory.length - 9);
-    conversationHistory.unshift(systemMessage);
+  // Trim history to max 10 messages + system
+  if (history.length > 11) {
+    const systemMsg = history.shift();
+    history.splice(0, history.length - 10);
+    history.unshift(systemMsg);
   }
 
   try {
@@ -44,7 +55,7 @@ client.on('messageCreate', async (message) => {
 
     const response = await axios.post('https://api.deepseek.com/v1/chat/completions', {
       model: "deepseek-chat",
-      messages: conversationHistory,
+      messages: history,
       temperature: 0.7,
       max_tokens: 150
     }, {
@@ -55,26 +66,26 @@ client.on('messageCreate', async (message) => {
     });
 
     const reply = response.data.choices[0].message.content;
+    history.push({ role: "assistant", content: reply });
 
-    conversationHistory.push({ role: "assistant", content: reply });
     await message.reply(reply);
-  } catch (error) {
-    console.error('DeepSeek API Error:');
-    if (error.response) {
-      console.error('Status:', error.response.status);
-      console.error('Data:', JSON.stringify(error.response.data, null, 2));
+  } catch (err) {
+    console.error("DeepSeek API Error:");
+    if (err.response) {
+      console.error("Status:", err.response.status);
+      console.error("Data:", err.response.data);
     } else {
-      console.error('Message:', error.message);
+      console.error("Message:", err.message);
     }
-    await message.reply("I encountered an error processing your message. Please try again later.");
+    await message.reply("I ran into an error trying to reply. Please try again later.");
   }
 });
 
-client.on('error', (error) => console.error('Discord Client Error:', error));
-
+// Optional health check
 const app = express();
-app.get('/health', (req, res) => res.status(200).json({ status: 'ok' }));
+app.get('/health', (_, res) => res.json({ status: 'ok' }));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Web server running on port ${PORT}`));
 
+// Login to Discord
 client.login(process.env.DISCORD_TOKEN);
